@@ -1,0 +1,15 @@
+**/target
+**/dist
+**/build
+**/node_modules
+**/.mvn
+**/.idea
+**/.git
+**/.venv
+*.log
+*.tmp
+*.swp
+.DS_Store
+.gitignore
+docker-compose.override.yml
+Dockerfile*

@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  ventas-backend:
+    build:
+      context: ./back-Ventas_SpringBoot/Springboot-API-REST
+      dockerfile: Dockerfile
+    container_name: ventas-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/ventas_db?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: example
+      DB_ENDPOINT: db
+      DB_PORT: 3306
+      DB_NAME: ventas_db
+      DB_USERNAME: root
+      DB_PASSWORD: example
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  despacho-backend:
+    build:
+      context: ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+      dockerfile: Dockerfile
+    container_name: despacho-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/despachos_db?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: example
+      DB_ENDPOINT: db
+      DB_PORT: 3306
+      DB_NAME: despachos_db
+      DB_USERNAME: root
+      DB_PASSWORD: example
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./front_despacho
+      dockerfile: Dockerfile
+      args:
+        VITE_VENTAS_API_URL: http://localhost:8080
+        VITE_DESPACHOS_API_URL: http://localhost:8081
+    container_name: despacho-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - ventas-backend
+      - despacho-backend
+    networks:
+      - app-network
+
+  db:
+    image: mysql:8.0
+    container_name: despacho-db
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
+    driver: bridge
