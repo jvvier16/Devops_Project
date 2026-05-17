@@ -1,0 +1,58 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Azure
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Deploy with Terraform
+        working-directory: infra/etapa_2
+        run: |
+          terraform init
+          terraform plan -out=tfplan
+          terraform apply tfplan
+        env:
+          TF_VAR_location: eastus
+          TF_VAR_environment: production
+      
+      - name: Get Outputs
+        id: terraform_outputs
+        working-directory: infra/etapa_2
+        run: |
+          echo "app_service_url=$(terraform output -raw app_service_url)" >> $GITHUB_OUTPUT
+      
+      - name: Deploy Docker to Azure Container Instances
+        run: |
+          az container create \
+            --resource-group despacho-rg \
+            --name despacho-app \
+            --image ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/despacho-frontend:latest \
+            --cpu 1 \
+            --memory 1 \
+            --registry-login-server ${{ env.REGISTRY }} \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Notification
+        if: always()
+        run: |
+          echo "✅ Deployment completed"
+          echo "App URL: ${{ steps.terraform_outputs.outputs.app_service_url }}"

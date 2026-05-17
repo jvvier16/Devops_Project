@@ -20,10 +20,17 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 }
 
-resource "aws_subnet" "public" {
+resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
+  cidr_block              = "10.0.10.0/24"
   availability_zone       = "${var.aws_region}a"
+  map_public_ip_on_launch = true
+}
+
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.11.0/24"
+  availability_zone       = "${var.aws_region}b"
   map_public_ip_on_launch = true
 }
 
@@ -40,8 +47,13 @@ resource "aws_route_table" "public" {
   }
 }
 
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
+resource "aws_route_table_association" "public_a" {
+  subnet_id      = aws_subnet.public_a.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "public_b" {
+  subnet_id      = aws_subnet.public_b.id
   route_table_id = aws_route_table.public.id
 }
 
@@ -73,6 +85,20 @@ resource "aws_security_group" "main" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 8081
+    to_port     = 8081
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    self        = true
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -80,45 +106,17 @@ resource "aws_security_group" "main" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-resource "aws_security_group_rule" "mysql_internal" {
-  type                     = "ingress"
-  from_port                = 3306
-  to_port                  = 3306
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.main.id
-  source_security_group_id = aws_security_group.main.id
-}
-
-resource "aws_security_group_rule" "backend_port" {
-  type              = "ingress"
-  from_port         = 8080
-  to_port           = 8080
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.main.id
-}
-
-resource "aws_security_group_rule" "despacho_port" {
-  type              = "ingress"
-  from_port         = 8081
-  to_port           = 8081
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.main.id
-}
 
 ############################
-# ECR
+# ECR - Data Sources para reutilizar repos existentes
 ############################
 
-resource "aws_ecr_repository" "backend" {
-  name         = "${var.project_name}-backend"
-  force_delete = true
+data "aws_ecr_repository" "backend" {
+  name = "${var.project_name}-backend"
 }
 
-resource "aws_ecr_repository" "frontend" {
-  name         = "${var.project_name}-frontend"
-  force_delete = true
+data "aws_ecr_repository" "frontend" {
+  name = "${var.project_name}-frontend"
 }
 
 ############################
@@ -138,7 +136,7 @@ data "aws_ami" "amazon_linux" {
 resource "aws_instance" "db" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = "t3.micro"
-  subnet_id              = aws_subnet.public.id
+  subnet_id              = aws_subnet.public_a.id
   vpc_security_group_ids = [aws_security_group.main.id]
   key_name               = var.key_pair_name
 
@@ -185,10 +183,9 @@ resource "aws_instance" "db" {
   }
 }
 
-#CLOUD WATCH
-resource "aws_cloudwatch_log_group" "ecs" {
-  name              = "/ecs/${var.project_name}"
-  retention_in_days = 7
+#CLOUD WATCH - Data Source para reutilizar log group existente
+data "aws_cloudwatch_log_group" "ecs" {
+  name = "/ecs/${var.project_name}"
 }
 
 ############################
@@ -212,7 +209,7 @@ resource "aws_lb" "main" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.main.id]
-  subnets            = [aws_subnet.public.id]
+  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
 }
 
 resource "aws_lb_target_group" "app" {
@@ -258,7 +255,7 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([
     {
       name      = "backend"
-      image     = "${aws_ecr_repository.backend.repository_url}:latest"
+      image     = "${data.aws_ecr_repository.backend.repository_url}:latest"
       essential = true
 
       portMappings = [
@@ -307,7 +304,7 @@ resource "aws_ecs_task_definition" "app" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
+          "awslogs-group"         = data.aws_cloudwatch_log_group.ecs.name
           "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "backend"
         }
@@ -315,7 +312,7 @@ resource "aws_ecs_task_definition" "app" {
     },
     {
       name      = "frontend"
-      image     = "${aws_ecr_repository.frontend.repository_url}:latest"
+      image     = "${data.aws_ecr_repository.frontend.repository_url}:latest"
       essential = true
 
       portMappings = [
@@ -340,7 +337,7 @@ resource "aws_ecs_task_definition" "app" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
+          "awslogs-group"         = data.aws_cloudwatch_log_group.ecs.name
           "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "frontend"
         }
@@ -366,7 +363,7 @@ resource "aws_ecs_service" "app" {
   deployment_maximum_percent         = 200
 
   network_configuration {
-    subnets          = [aws_subnet.public.id]
+    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
     security_groups  = [aws_security_group.main.id]
     assign_public_ip = true
   }

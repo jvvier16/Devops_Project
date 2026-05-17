@@ -1,1 +1,30 @@
-*terraform*
+# Terraform
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.hcl
+.terraform/
+.terraform.lock.hcl
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+node_modules/
+dist/
+target/
+.gradle/
+build/
+*.jar
