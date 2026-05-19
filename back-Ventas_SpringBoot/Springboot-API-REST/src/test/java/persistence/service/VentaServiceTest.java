@@ -83,7 +83,6 @@ public class VentaServiceTest {
                 .despachoGenerado(false)
                 .build();
 
-        @SuppressWarnings("null")
         final Venta ventaWithIdNotNull = ventaWithId;
         if (ventaWithIdNotNull != null) {
             when(ventaRepository.save(any(Venta.class))).thenReturn(ventaWithIdNotNull);
@@ -93,7 +92,6 @@ public class VentaServiceTest {
         Venta result = ventaService.saveVenta(ventaToSave);
 
         // Verificar
-        @SuppressWarnings("null")
         final Venta ventaToSaveNotNull = ventaToSave;
         if (ventaToSaveNotNull != null) {
             verify(ventaRepository).save(ventaToSaveNotNull);
