@@ -1,36 +1,27 @@
 name: Deploy to Azure
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
-  deploy:
+  info:
     runs-on: ubuntu-latest
-    name: Deploy to Azure
+    name: Deployment Info
     
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
-      
-      - name: Terraform Init
-        working-directory: infra/etapa_2
-        run: terraform init
-      
-      - name: Terraform Plan
-        working-directory: infra/etapa_2
-        run: terraform plan
-        env:
-          TF_VAR_aws_region: us-east-1
-          TF_VAR_project_name: devops-u2
-      
-      - name: Completion
+      - name: Show Deployment Instructions
         run: |
-          echo "✅ Terraform plan completed"
-          echo "Ready for manual terraform apply with AWS credentials"
+          echo "===================================="
+          echo "📦 Manual Deployment to AWS"
+          echo "===================================="
+          echo ""
+          echo "Este workflow está deshabilitado para uso manual."
+          echo ""
+          echo "Para desplegar, usa los scripts locales:"
+          echo "  1. ./pre-deploy-check.ps1"
+          echo "  2. ./full-deploy.ps1"
+          echo ""
+          echo "Ver documentación: AWS_READY.md"
+          echo "===================================="
