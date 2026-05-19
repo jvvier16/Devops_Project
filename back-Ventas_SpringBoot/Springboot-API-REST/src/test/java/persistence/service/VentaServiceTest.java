@@ -40,15 +40,20 @@ public class VentaServiceTest {
 
     @Test
     @DisplayName("Cuando se guarda una venta válida, entonces se persiste correctamente")
+    @SuppressWarnings("null")
     public void whenSavingValidVenta_thenItIsPersistedCorrectly(){
         //Prepara la simulación
-        when(ventaRepository.save(any(Venta.class))).thenReturn(venta);
+        if (venta != null) {
+            when(ventaRepository.save(any(Venta.class))).thenReturn(venta);
+        }
 
         //Llama al servicio
         Venta savedVenta = ventaService.saveVenta(venta);
 
         //Verifica el resultado
-        verify(ventaRepository, times(1)).save(venta);
+        if (venta != null) {
+            verify(ventaRepository, times(1)).save(venta);
+        }
 
         //Verifica que la venta guardada es la misma que la venta original
         assertNotNull(savedVenta);
@@ -60,6 +65,7 @@ public class VentaServiceTest {
 
     @Test
     @DisplayName("Cuando se guarda una venta, entonces se asigna un ID")
+    @SuppressWarnings("null")
     public void whenVentaIsSavedthenIdIsAssigned(){
         // Preparar
         Venta ventaToSave = Venta.builder()
@@ -77,15 +83,25 @@ public class VentaServiceTest {
                 .despachoGenerado(false)
                 .build();
 
-        when(ventaRepository.save(any(Venta.class))).thenReturn(ventaWithId);
+        @SuppressWarnings("null")
+        final Venta ventaWithIdNotNull = ventaWithId;
+        if (ventaWithIdNotNull != null) {
+            when(ventaRepository.save(any(Venta.class))).thenReturn(ventaWithIdNotNull);
+        }
 
         // Ejecutar
         Venta result = ventaService.saveVenta(ventaToSave);
 
         // Verificar
-        verify(ventaRepository).save(ventaToSave);
+        @SuppressWarnings("null")
+        final Venta ventaToSaveNotNull = ventaToSave;
+        if (ventaToSaveNotNull != null) {
+            verify(ventaRepository).save(ventaToSaveNotNull);
+        }
         assertNotNull(result);
         assertEquals(1L, result.getIdVenta());
-        assertEquals(ventaToSave.getDireccionCompra(), result.getDireccionCompra());
+        if (ventaToSaveNotNull != null) {
+            assertEquals(ventaToSaveNotNull.getDireccionCompra(), result.getDireccionCompra());
+        }
     }
 }

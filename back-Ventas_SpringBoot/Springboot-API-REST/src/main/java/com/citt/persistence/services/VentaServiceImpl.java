@@ -23,11 +23,17 @@ public class VentaServiceImpl implements VentaService{
 
     @Override
     public Venta saveVenta(Venta venta) {
+        if (venta == null) {
+            throw new IllegalArgumentException("Venta no puede ser nula");
+        }
         return ventaRepository.save(venta);
     }
 
     @Override
     public Venta updateVenta(Long idVenta, Venta venta) throws VentaNotFoundException {
+        if (idVenta == null) {
+            throw new IllegalArgumentException("ID no puede ser nulo");
+        }
         Optional<Venta> optionalVenta = ventaRepository.findById(idVenta);
 
         if (optionalVenta.isPresent()) {
@@ -50,6 +56,9 @@ public class VentaServiceImpl implements VentaService{
             }
 
             // Guardar la venta actualizada en la BD
+            if (ventaDB == null) {
+                throw new IllegalArgumentException("VentaDB no puede ser nula");
+            }
             return ventaRepository.save(ventaDB);
         } else {
             throw new VentaNotFoundException("!No es posible actualizar! No existe venta con ID: " + idVenta);
@@ -58,6 +67,9 @@ public class VentaServiceImpl implements VentaService{
 
     @Override
     public void deleteVenta(Long idVenta) throws VentaNotFoundException {
+        if (idVenta == null) {
+            throw new IllegalArgumentException("ID no puede ser nulo");
+        }
         Optional<Venta> venta = ventaRepository.findById(idVenta);
         if(!venta.isPresent()) {
             throw new VentaNotFoundException("¡No es posible eliminar! No existe venta con el ID: " + idVenta);
@@ -68,6 +80,9 @@ public class VentaServiceImpl implements VentaService{
 
     @Override
     public Venta findById(Long idVenta) throws VentaNotFoundException {
+        if (idVenta == null) {
+            throw new IllegalArgumentException("ID no puede ser nulo");
+        }
         Optional<Venta> venta = ventaRepository.findById(idVenta);
         if(!venta.isPresent()) throw new VentaNotFoundException("Venta no encontrada con el ID: " + idVenta);
         return venta.get();

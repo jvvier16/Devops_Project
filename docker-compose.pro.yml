@@ -1,148 +1,148 @@
-version: "3.9"
+version: '3.9'
 
 services:
+  # Backend Ventas - API REST
   ventas-backend:
     build:
       context: ./back-Ventas_SpringBoot/Springboot-API-REST
       dockerfile: Dockerfile
     container_name: ventas-backend
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/ventas_db?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: example
-      DB_ENDPOINT: db
-      DB_PORT: 3306
-      DB_NAME: ventas_db
-      DB_USERNAME: root
-      DB_PASSWORD: example
-    expose:
-      - "8080"
+      - DB_ENDPOINT=mysql
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-asistencia_db}
+      - DB_USERNAME=${DB_USERNAME:-admin}
+      - DB_PASSWORD=${DB_PASSWORD:-YourSecurePassword123!}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${DB_NAME:-asistencia_db}?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-admin}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-YourSecurePassword123!}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    ports:
+      - "8080:8080"
     depends_on:
-      db:
+      mysql:
         condition: service_healthy
     networks:
-      - app-network
-    restart: unless-stopped
+      - devops-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/swagger-ui.html"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 40s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Backend Despachos - API REST
   despacho-backend:
     build:
       context: ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
       dockerfile: Dockerfile
     container_name: despacho-backend
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/despachos_db?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: example
-      DB_ENDPOINT: db
-      DB_PORT: 3306
-      DB_NAME: despachos_db
-      DB_USERNAME: root
-      DB_PASSWORD: example
-      SERVER_PORT: 8081
-    expose:
-      - "8081"
+      - DB_ENDPOINT=mysql
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-asistencia_db}
+      - DB_USERNAME=${DB_USERNAME:-admin}
+      - DB_PASSWORD=${DB_PASSWORD:-YourSecurePassword123!}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${DB_NAME:-asistencia_db}?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-admin}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-YourSecurePassword123!}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    ports:
+      - "8081:8081"
     depends_on:
-      db:
+      mysql:
         condition: service_healthy
     networks:
-      - app-network
-    restart: unless-stopped
+      - devops-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/swagger-ui.html"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 40s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Frontend
   frontend:
     build:
       context: ./front_despacho
       dockerfile: Dockerfile
       args:
-        VITE_VENTAS_API_URL: http://nginx:80/api/ventas
-        VITE_DESPACHOS_API_URL: http://nginx:80/api/despachos
+        VITE_VENTAS_API_URL: ${VITE_VENTAS_API_URL:-http://localhost:80/api/ventas}
+        VITE_DESPACHOS_API_URL: ${VITE_DESPACHOS_API_URL:-http://localhost:80/api/despachos}
     container_name: despacho-frontend
-    expose:
-      - "80"
-    depends_on:
-      ventas-backend:
-        condition: service_healthy
-      despacho-backend:
-        condition: service_healthy
-      nginx:
-        condition: service_healthy
-    networks:
-      - app-network
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    container_name: api-gateway
     ports:
       - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      ventas-backend:
-        condition: service_healthy
-      despacho-backend:
-        condition: service_healthy
+      - ventas-backend
+      - despacho-backend
     networks:
-      - app-network
-    restart: unless-stopped
+      - devops-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
-
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: phpmyadmin
-    environment:
-      PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: example
-    ports:
-      - "8888:80"
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - app-network
+      start_period: 15s
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  db:
-    image: mysql:8.0
-    container_name: despacho-db
+  # Base de Datos MySQL
+  mysql:
+    image: mysql:8-oracle
+    container_name: mysql-db
     environment:
-      MYSQL_ROOT_PASSWORD: example
-      MYSQL_DATABASE: ventas_db
-    expose:
-      - "3306"
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-YourSecurePassword123!}
+      MYSQL_DATABASE: ${DB_NAME:-asistencia_db}
+      MYSQL_USER: ${DB_USERNAME:-admin}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-YourSecurePassword123!}
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "3306:3306"
     volumes:
-      - db_data:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
       - ./infra/mysql-init:/docker-entrypoint-initdb.d:ro
     networks:
-      - app-network
-    restart: unless-stopped
+      - devops-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pexample"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-YourSecurePassword123!}"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 40s
-
-volumes:
-  db_data:
+      start_period: 30s
+    restart: unless-stopped
+    command: 
+      - --bind-address=0.0.0.0
+      - --performance-schema=OFF
+      - --max_connections=1000
+      - --default-storage-engine=InnoDB
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
-  app-network:
+  devops-network:
     driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local

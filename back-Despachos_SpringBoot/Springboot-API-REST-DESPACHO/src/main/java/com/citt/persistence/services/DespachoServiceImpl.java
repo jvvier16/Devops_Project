@@ -22,11 +22,17 @@ public class DespachoServiceImpl implements DespachoService{
 
     @Override
     public Despacho saveDespacho(Despacho despacho) {
+        if (despacho == null) {
+            throw new IllegalArgumentException("Despacho no puede ser nulo");
+        }
         return despachoRepository.save(despacho);
     }
 
     @Override
     public Despacho updateDespacho(Long idDespacho, Despacho despacho) throws DespachoNotFoundException {
+        if (idDespacho == null) {
+            throw new IllegalArgumentException("ID no puede ser nulo");
+        }
         return despachoRepository.findById(idDespacho).map(existingDespacho -> {
             existingDespacho.setFechaDespacho(despacho.getFechaDespacho());
             existingDespacho.setPatenteCamion(despacho.getPatenteCamion());
@@ -41,6 +47,9 @@ public class DespachoServiceImpl implements DespachoService{
 
     @Override
     public void deleteDespacho(Long idDespacho) throws DespachoNotFoundException {
+        if (idDespacho == null) {
+            throw new IllegalArgumentException("ID no puede ser nulo");
+        }
         Optional<Despacho> despacho = despachoRepository.findById(idDespacho);
         if(!despacho.isPresent()){
             throw new DespachoNotFoundException("¡No es posible eliminar! No existe despacho con el ID:" + idDespacho);
@@ -51,6 +60,9 @@ public class DespachoServiceImpl implements DespachoService{
 
     @Override
     public Despacho findById(Long idDespacho) throws DespachoNotFoundException {
+        if (idDespacho == null) {
+            throw new IllegalArgumentException("ID no puede ser nulo");
+        }
         Optional<Despacho> despacho = despachoRepository.findById(idDespacho);
         if(!despacho.isPresent()) throw new DespachoNotFoundException("¡No existe despacho con el ID:" + idDespacho);
         return despacho.get();
