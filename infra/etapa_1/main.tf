@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
+        source = "hashicorp/aws"
+        version = "~> 5.0"
     }
   }
 }
@@ -11,23 +11,18 @@ provider "aws" {
   region = var.aws_region
 }
 
-# ECR Repositories
-resource "aws_ecr_repository" "backend" {
-  name             = "${var.project_name}-backend"
-  image_tag_mutability = "MUTABLE"
-  force_delete     = true
+#ECR: necesitamos 3 elementos en ECR
+resource "aws_ecr_repository" "backend_ventas" {
+  name = "${var.nombre_proyecto}-backend-ventas"
+  force_delete = true
+}
 
-  image_scanning_configuration {
-    scan_on_push = false
-  }
+resource "aws_ecr_repository" "backend_despachos" {
+  name = "${var.nombre_proyecto}-backend-despachos"
+  force_delete = true
 }
 
 resource "aws_ecr_repository" "frontend" {
-  name             = "${var.project_name}-frontend"
-  image_tag_mutability = "MUTABLE"
-  force_delete     = true
-
-  image_scanning_configuration {
-    scan_on_push = false
-  }
+  name = "${var.nombre_proyecto}-frontend"
+  force_delete = true
 }

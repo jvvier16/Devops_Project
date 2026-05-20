@@ -1,34 +1,34 @@
-output "backend_ecr_url" {
-  description = "Backend ECR repository URL"
-  value       = data.aws_ecr_repository.backend.repository_url
+output "frontend_public_ip" {
+  description = "IP publica del frontend (unico punto de acceso desde Internet)"
+  value       = aws_instance.frontend.public_ip
 }
 
-output "frontend_ecr_url" {
-  description = "Frontend ECR repository URL"
-  value       = data.aws_ecr_repository.frontend.repository_url
-}
-
-output "mysql_public_ip" {
-  description = "MySQL EC2 instance public IP"
-  value       = aws_instance.db.public_ip
+output "backend_private_ip" {
+  description = "IP privada del servidor de backends (subred privada)"
+  value       = aws_instance.backend.private_ip
 }
 
 output "mysql_private_ip" {
-  description = "MySQL EC2 instance private IP"
+  description = "IP privada de MySQL"
   value       = aws_instance.db.private_ip
 }
 
-output "load_balancer_dns" {
-  description = "Load balancer DNS name"
-  value       = aws_lb.main.dns_name
+output "frontend_url" {
+  value = "http://${aws_instance.frontend.public_ip}/"
 }
 
-output "ecs_cluster_name" {
-  description = "ECS cluster name"
-  value       = aws_ecs_cluster.main.name
+output "ecr_registry" {
+  value = local.ecr_registry
 }
 
-output "ecs_service_name" {
-  description = "ECS service name"
-  value       = aws_ecs_service.app.name
+output "backend_ventas_ecr" {
+  value = data.aws_ecr_repository.backend_ventas.repository_url
+}
+
+output "backend_despachos_ecr" {
+  value = data.aws_ecr_repository.backend_despachos.repository_url
+}
+
+output "frontend_ecr" {
+  value = data.aws_ecr_repository.frontend.repository_url
 }

@@ -30,10 +30,10 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            @org.springframework.lang.NonNull MethodArgumentNotValidException ex,
-            @org.springframework.lang.NonNull HttpHeaders headers,
-            @org.springframework.lang.NonNull HttpStatusCode status,
-            @org.springframework.lang.NonNull WebRequest request) {
+            MethodArgumentNotValidException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
 
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {

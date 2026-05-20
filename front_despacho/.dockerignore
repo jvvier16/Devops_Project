@@ -1,10 +1,6 @@
 node_modules
-npm-debug.log*
-.Yarn*
 dist
-build
-.DS_Store
 .git
-.gitignore
-.vscode
 .env
+*.md
+README.md

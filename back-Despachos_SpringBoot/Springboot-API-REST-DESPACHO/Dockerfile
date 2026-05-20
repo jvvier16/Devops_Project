@@ -1,20 +1,23 @@
-FROM maven:3.9.9-eclipse-temurin-17-alpine AS build
-WORKDIR /app
+# Multistage
+# Stage 1: compilar JAR
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /build
 COPY pom.xml .
 COPY src ./src
-RUN mvn -B -DskipTests package
+RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:17-jre-alpine
+# Stage 2: ejecutar API como usuario no root
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-# Install curl for healthchecks
-RUN apk add --no-cache curl
+RUN groupadd -r appuser && useradd -r -g appuser appuser \
+  && apt-get update && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=builder /build/target/*.jar app.jar
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown -R appuser:appuser /app /entrypoint.sh
+
+USER appuser
 EXPOSE 8081
-
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8081/actuator/health || exit 1
-
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["/entrypoint.sh"]

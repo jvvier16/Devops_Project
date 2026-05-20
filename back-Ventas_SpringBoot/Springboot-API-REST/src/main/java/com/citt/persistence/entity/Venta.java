@@ -30,6 +30,5 @@ public class Venta {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)  // Especifica el formato de fecha
     private LocalDate fechaCompra;
     @NotNull(message = "El campo de despacho debe ser proporcionado")
-    @lombok.Builder.Default
     private Boolean despachoGenerado = false;
 }
