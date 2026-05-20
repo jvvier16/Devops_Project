@@ -1,10 +1,10 @@
-# 🚀 DevOps Project - Despachos & Ventas
+# DevOps Project - Despachos & Ventas
 
-Arquitectura de microservicios modernos con Docker, Spring Boot, React y MySQL. Listo para AWS/Azure.
+Arquitectura de microservicios modernos con Docker, Spring Boot, React y MySQL. Listo para AWS/Azure con Terraform.
 
 ---
 
-## 📊 Arquitectura
+## Arquitectura
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -29,22 +29,29 @@ Arquitectura de microservicios modernos con Docker, Spring Boot, React y MySQL. 
 
 ## ✨ Características
 
-✅ **Microservicios**
+✅ **Características**
 - Backend Ventas (Spring Boot 3.x, Puerto 8080)
 - Backend Despachos (Spring Boot 3.x, Puerto 8081)
 - Frontend React (Vite, Nginx)
 
 ✅ **DevOps Ready**
-- Docker Compose (3 configuraciones: dev, estándar, pro)
+- Docker Compose (desarrollo local)
 - Healthchecks automáticos
 - Nginx reverse proxy
 - phpMyAdmin integrado
+- Terraform IaC para AWS
 
 ✅ **CI/CD**
 - GitHub Actions pipeline
-- Build automático
+- Build automático con Docker Buildx
 - Tests automáticos
-- Docker Registry
+- Docker Registry (ECR)
+
+✅ **Infraestructura como Código**
+- Terraform con 2 etapas
+- Etapa 1: Recursos de red e infraestructura
+- Etapa 2: Aplicaciones y servicios
+- ECS, RDS, ALB, ECR en AWS
 
 ✅ **Base de Datos**
 - MySQL 8.0
@@ -58,38 +65,71 @@ Arquitectura de microservicios modernos con Docker, Spring Boot, React y MySQL. 
 
 ---
 
-## 🎯 Inicio Rápido
+## Inicio Rápido - Desarrollo Local
 
-### 1️⃣ Clonar y Preparar
+### Opción 1: Docker Compose (Recomendado)
+
 ```bash
-git clone <repo>
-cd Devops_Project
+# Copiar archivo de configuración de variables
+cp .env.example .env
 
+# Editar .env con tus valores
+# DB_PASSWORD=tu_contraseña_segura
+# DB_NAME=asistencia_db
+
+# Levantar todos los servicios
+docker-compose up --build
+
+# La aplicación estará disponible en:
+# - Frontend: http://localhost:3000
+# - Backend Ventas: http://localhost:8080
+# - Backend Despachos: http://localhost:8081
+# - MySQL: localhost:3306
+```
+
+### Opción 2: Desarrollo Manual
+
+```bash
 # Backend Ventas
 cd back-Ventas_SpringBoot/Springboot-API-REST
 mvn clean package -DskipTests
-cd ../../../
+java -jar target/ventas-api.jar
 
-# Backend Despachos
+# Backend Despachos (otra terminal)
 cd back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
 mvn clean package -DskipTests
-cd ../../../
+java -jar target/despachos-api.jar
 
-# Frontend
+# Frontend (otra terminal)
 cd front_despacho
 npm install
-npm run build
-cd ../
+npm run dev
 ```
 
-### 2️⃣ Levantar con Docker
+---
 
-**Opción A: Desarrollo (Recomendado)**
-```bash
-docker-compose -f docker-compose.dev.yml up --build
-```
-✔ Acceso directo a cada servicio
-✔ Puertos de debug activados (5005, 5006)
+## Despliegue en AWS
+
+Para desplegar la aplicación completa en AWS con infraestructura como código, consulta la guía detallada:
+
+[DEPLOY_PASO_A_PASO.md](DEPLOY_PASO_A_PASO.md)
+
+### Resumen del Proceso
+
+1. Configurar AWS CLI: `aws configure`
+2. Definir variables de entorno (credenciales, key pairs)
+3. Terraform Init: `terraform init` en `infra/etapa_1`
+4. Terraform Plan: `terraform plan` para revisar cambios
+5. Terraform Apply: `terraform apply` para crear infraestructura
+6. Docker Build & Push: Subir imágenes a Amazon ECR
+7. Terraform Apply Etapa 2: Desplegar aplicaciones en ECS
+8. Acceder a través del ALB (Application Load Balancer)
+
+**Tiempo aproximado de despliegue:** 15-20 minutos
+
+---
+
+## Estructura del Proyecto
 
 **Opción B: Estándar**
 ```bash
