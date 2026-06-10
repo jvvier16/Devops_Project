@@ -1,0 +1,33 @@
+# ConfigMap para variables de configuración compartidas
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: default
+data:
+  # Configuración de base de datos
+  DB_ENDPOINT: mysql
+  DB_PORT: "3306"
+  DB_NAME: despachos
+  
+  # Configuración de aplicación
+  APP_ENV: production
+  LOG_LEVEL: INFO
+  
+  # Configuración de frontend
+  BACKEND_HOST: backend-ventas
+  BACKEND_HOST_DESPACHOS: backend-despacho
+
+---
+
+# Secret para credenciales sensibles
+# En producción, usar AWS Secrets Manager o HashiCorp Vault
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: default
+type: Opaque
+stringData:
+  DB_USERNAME: root
+  DB_PASSWORD: root  # CAMBIAR EN PRODUCCIÓN

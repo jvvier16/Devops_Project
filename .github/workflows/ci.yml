@@ -1,37 +1,94 @@
-name: Integracion continua
-
+name: Despliegue en AWS con EKS(elastic kubernet service)
 on:
-  push:
-    branches:
-      - main
-      - develop
   pull_request:
     branches:
-      - main
       - develop
-
+  push:
+    branches:
+      - develop
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-
+    env:
+      AWS_REGION: us-east-1
+      CLUSTER_NAME: despachos-cluster
     steps:
-      - name: Checkout del código
+      - name: Checkout (git clone...)
         uses: actions/checkout@v4
 
-      - name: Build backend ventas
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
+          aws-region: ${{env.AWS_REGION}}
+      
+      - name: Loguear con ECR (elastic container registry)
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Rescatar el AWS Account ID
         run: |
-          docker build \
-            -t ventas-backend:ci \
-            ./back-Ventas_SpringBoot/Springboot-API-REST
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
 
-      - name: Build backend despachos
+      - name: Definir las URL de los ECR
         run: |
-          docker build \
-            -t despachos-backend:ci \
-            ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+          echo "BACKEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/backend-despacho" >> $GITHUB_ENV
+          echo "FRONTEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/frontend-despacho" >> $GITHUB_ENV
+      
+      - name: Build backend
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $BACKEND_ECR:${GITHUB_SHA} \
+            ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO \
+            --load
+      - name: Push backend
+        run: |
+          docker push $BACKEND_ECR:${GITHUB_SHA}
 
       - name: Build frontend
         run: |
-          docker build \
-            -t despacho-frontend:ci \
-            ./front_despacho
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $FRONTEND_ECR:${GITHUB_SHA} \
+            ./front_despacho \
+            --load
+      - name: Push frontend
+        run: |
+          docker push $FRONTEND_ECR:${GITHUB_SHA}
+      
+      - name: Instalar kubectl
+        uses: azure/setup-kubectl@v4
+      - name: Configurar EKS a través de GitHub ACtions
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $CLUSTER_NAME
+      - name: Aplicar los manifiestos de kubernet
+        run: |
+          kubectl apply -f infra/k8s/
+          
+      - name: Actualizar nombre de la imagen del backend en backend.yml
+        run: |
+          kubectl set image deployment/backend-despacho \
+            backend-despacho=$BACKEND_ECR:${GITHUB_SHA}
+      - name: Actualizar nombre de la imagen del frontend en frontend.yml
+        run: |
+          kubectl set image deployment/frontend-despacho \
+            frontend-despacho=$FRONTEND_ECR:${GITHUB_SHA}
+      
+      - name: Esperar despliegue del backend
+        run: |
+          kubectl rollout status deployment/backend-despacho
+      - name: Esperar despliegue del frontend
+        run: |
+          kubectl rollout status deployment/frontend-despacho
+      
+      - name: Verificar servicio del frontend
+        run: |
+          kubectl get svc frontend-despacho
+      
+      - name: Obtener dirección del Load Balancer
+        run: |
+          kubectl get service frontend-despacho -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "Buscando dirección..."
