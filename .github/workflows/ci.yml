@@ -3,10 +3,10 @@ name: Despliegue en AWS con EKS(elastic kubernet service)
 on:
   pull_request:
     branches:
-      - develops
+      - devops
   push:
     branches:
-      - develops
+      - devops
 jobs:
   deploy:
     runs-on: ubuntu-latest
