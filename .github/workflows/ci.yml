@@ -1,4 +1,5 @@
 name: Despliegue en AWS con EKS(elastic kubernet service)
+#como desplegar 
 on:
   pull_request:
     branches:
