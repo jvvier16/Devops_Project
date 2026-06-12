@@ -12,8 +12,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-ETAPA1_DIR="${ROOT_DIR}/infra/etapa_1"
-ETAPA2_DIR="${ROOT_DIR}/infra/etapa_2"
+TERRAFORM_DIR="${ROOT_DIR}/infra/terraform"
+K8S_DIR="${ROOT_DIR}/infra/k8s"
 
 # shellcheck source=/dev/null
 [[ -f "${SCRIPT_DIR}/deploy.env" ]] && source "${SCRIPT_DIR}/deploy.env"
@@ -59,47 +59,29 @@ check_prereqs() {
   log "Cuenta AWS: $(aws sts get-caller-identity --query Account --output text)"
 }
 
-tf_vars_etapa2() {
-  echo -var="db_user=${DB_USER}" \
-       -var="db_password=${DB_PASSWORD}" \
-       -var="db_name=${DB_NAME}" \
-       -var="key_pair_name=${KEY_PAIR_NAME}"
-}
-
 terraform_init_apply() {
   local dir="$1"
   log "Terraform init en ${dir}..."
   (cd "${dir}" && terraform init -input=false)
   log "Terraform apply en ${dir}..."
-  if [[ "${dir}" == *etapa_2* ]]; then
-    # shellcheck disable=SC2046
-    (cd "${dir}" && terraform apply -auto-approve $(tf_vars_etapa2))
-  else
-    (cd "${dir}" && terraform apply -auto-approve)
-  fi
+  (cd "${dir}" && terraform apply -auto-approve)
 }
 
 terraform_destroy() {
   local dir="$1"
   log "Terraform destroy en ${dir}..."
   (cd "${dir}" && terraform init -input=false)
-  if [[ "${dir}" == *etapa_2* ]]; then
-    # shellcheck disable=SC2046
-    (cd "${dir}" && terraform destroy -auto-approve $(tf_vars_etapa2)) || warn "Destroy etapa_2 con advertencias."
-  else
-    (cd "${dir}" && terraform destroy -auto-approve) || warn "Destroy etapa_1 con advertencias."
-  fi
+  (cd "${dir}" && terraform destroy -auto-approve) || warn "Destroy con advertencias."
 }
 
 clean_local_state() {
   warn "Eliminando terraform.tfstate local..."
-  rm -f "${ETAPA1_DIR}"/terraform.tfstate "${ETAPA1_DIR}"/terraform.tfstate.backup
-  rm -f "${ETAPA2_DIR}"/terraform.tfstate "${ETAPA2_DIR}"/terraform.tfstate.backup
+  rm -f "${TERRAFORM_DIR}"/terraform.tfstate "${TERRAFORM_DIR}"/terraform.tfstate.backup
 }
 
 get_tf_output() {
   local name="$1"
-  (cd "${ETAPA2_DIR}" && terraform output -raw "${name}" 2>/dev/null) || true
+  (cd "${TERRAFORM_DIR}" && terraform output -raw "${name}" 2>/dev/null) || true
 }
 
 wait_for_tcp() {
@@ -230,11 +212,8 @@ cmd_deploy() {
   check_prereqs
   [[ "${fresh}" == "true" ]] && clean_local_state
 
-  log "=== Etapa 1: ECR ==="
-  terraform_init_apply "${ETAPA1_DIR}"
-
-  log "=== Etapa 2: VPC + EC2 (MySQL, Backend, Frontend) ==="
-  terraform_init_apply "${ETAPA2_DIR}"
+  log "=== Terraform: VPC, EKS, ECR ==="
+  terraform_init_apply "${TERRAFORM_DIR}"
 
   local mysql_ip backend_ip frontend_ip
   mysql_ip="$(get_tf_output mysql_private_ip)"
@@ -263,8 +242,7 @@ cmd_deploy() {
 cmd_destroy() {
   check_prereqs
   log "=== Destruyendo infraestructura ==="
-  terraform_destroy "${ETAPA2_DIR}"
-  terraform_destroy "${ETAPA1_DIR}"
+  terraform_destroy "${TERRAFORM_DIR}"
   log "Recursos eliminados."
 }
 

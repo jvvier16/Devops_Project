@@ -33,19 +33,31 @@ jobs:
 
       - name: Definir las URL de los ECR
         run: |
-          echo "BACKEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/backend-despacho" >> $GITHUB_ENV
+          echo "BACKEND_DESPACHO_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/backend-despacho" >> $GITHUB_ENV
+          echo "BACKEND_VENTAS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/backend-ventas" >> $GITHUB_ENV
           echo "FRONTEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/frontend-despacho" >> $GITHUB_ENV
       
-      - name: Build backend
+      - name: Build backend despacho
         run: |
           docker buildx build \
             --platform linux/amd64 \
-            -t $BACKEND_ECR:${GITHUB_SHA} \
+            -t $BACKEND_DESPACHO_ECR:${GITHUB_SHA} \
             ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO \
             --load
-      - name: Push backend
+      - name: Push backend despacho
         run: |
-          docker push $BACKEND_ECR:${GITHUB_SHA}
+          docker push $BACKEND_DESPACHO_ECR:${GITHUB_SHA}
+
+      - name: Build backend ventas
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $BACKEND_VENTAS_ECR:${GITHUB_SHA} \
+            ./back-Ventas_SpringBoot/Springboot-API-REST \
+            --load
+      - name: Push backend ventas
+        run: |
+          docker push $BACKEND_VENTAS_ECR:${GITHUB_SHA}
 
       - name: Build frontend
         run: |
@@ -69,19 +81,30 @@ jobs:
         run: |
           kubectl apply -f infra/k8s/
           
-      - name: Actualizar nombre de la imagen del backend en backend.yml
+      - name: Actualizar imagen backend despacho
         run: |
           kubectl set image deployment/backend-despacho \
-            backend-despacho=$BACKEND_ECR:${GITHUB_SHA}
-      - name: Actualizar nombre de la imagen del frontend en frontend.yml
+            backend-despacho=$BACKEND_DESPACHO_ECR:${GITHUB_SHA}
+
+      - name: Actualizar imagen backend ventas
+        run: |
+          kubectl set image deployment/backend-ventas \
+            backend-ventas=$BACKEND_VENTAS_ECR:${GITHUB_SHA}
+      
+      - name: Actualizar imagen frontend
         run: |
           kubectl set image deployment/frontend-despacho \
             frontend-despacho=$FRONTEND_ECR:${GITHUB_SHA}
       
-      - name: Esperar despliegue del backend
+      - name: Esperar despliegue backend despacho
         run: |
           kubectl rollout status deployment/backend-despacho
-      - name: Esperar despliegue del frontend
+      
+      - name: Esperar despliegue backend ventas
+        run: |
+          kubectl rollout status deployment/backend-ventas
+      
+      - name: Esperar despliegue frontend
         run: |
           kubectl rollout status deployment/frontend-despacho
       

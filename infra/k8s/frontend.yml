@@ -1,10 +1,10 @@
-#Despliegue
+# Despliegue Frontend Despacho
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-despacho
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: frontend-despacho
@@ -15,8 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend-despacho
-          image: ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/frontend-despacho:latest
-          #no descargar la imagen desde Docker Hub, sinó que local.
+          image: "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/frontend-despacho:${IMAGE_TAG}"
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -25,8 +24,28 @@ spec:
               value: backend-ventas
             - name: BACKEND_HOST_DESPACHOS
               value: backend-despacho
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
 ---
-#Service:
+# Service para Frontend Despacho
 apiVersion: v1
 kind: Service
 metadata:
@@ -37,7 +56,4 @@ spec:
   ports:
     - port: 80
       targetPort: 8080
-      #Puerto expuesto en el nodo de kubernet:
-      nodePort: 30080
-  #LoadBalancer: expone el servicio fuera de cluster kubernet:
   type: LoadBalancer

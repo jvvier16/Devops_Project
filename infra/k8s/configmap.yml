@@ -30,4 +30,4 @@ metadata:
 type: Opaque
 stringData:
   DB_USERNAME: root
-  DB_PASSWORD: root  # CAMBIAR EN PRODUCCIÓN
+  DB_PASSWORD: S3gura!P4ssw0rd2026  # Contraseña segura (cambiar en producción)
