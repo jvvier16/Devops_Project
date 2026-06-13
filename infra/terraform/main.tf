@@ -7,7 +7,13 @@ terraform {
     }
 }
 provider "aws" {
-  region = "us-east-1"
+  region              = var.aws_region
+  access_key          = var.aws_access_key_id
+  secret_key          = var.aws_secret_access_key
+  token               = var.aws_session_token != "" ? var.aws_session_token : null
+  
+  skip_credentials_validation = false
+  skip_metadata_api_check     = false
 }
 
 data "aws_iam_role" "labrole" {
@@ -115,20 +121,4 @@ resource "aws_ecr_repository" "frontend_despacho_repo" {
   tags = {
     Name = "frontend-despacho"
   }
-}
-#OUTPUTS:
-output "cluster_name" {
-  value = aws_eks_cluster.eks.name
-}
-output "cluster_endpoint" {
-  value = aws_eks_cluster.eks.endpoint
-}
-output "backend_despacho_ecr_url" {
-  value = aws_ecr_repository.backend_despacho_repo.repository_url
-}
-output "backend_ventas_ecr_url" {
-  value = aws_ecr_repository.backend_ventas_repo.repository_url
-}
-output "frontend_despacho_ecr_url" {
-  value = aws_ecr_repository.frontend_despacho_repo.repository_url
 }

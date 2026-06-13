@@ -1,0 +1,6 @@
+# Copia este archivo a terraform.tfvars y completa con tus credenciales de AWS Academy
+
+aws_access_key_id     = "tu_access_key_id"
+aws_secret_access_key = "tu_secret_access_key"
+aws_session_token     = "tu_session_token"
+aws_region            = "us-east-1"
