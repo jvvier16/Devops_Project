@@ -1,0 +1,96 @@
+name: Despliegue continuo
+
+on:
+  push:
+    branches:
+      - deploy
+
+env:
+  AWS_REGION: us-east-1
+  CLUSTER: innovatech-cluster
+  SERVICE: app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      # --- 1. COMPILACIÓN DE AMBOS BACKENDS (JAVA/MAVEN) ---
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build Backends JARs
+        run: |
+          # Compilar backend de Despachos
+          cd back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests
+          
+          # Compilar backend de Ventas
+          cd ../../back-Ventas_SpringBoot/Springboot-API-REST
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests
+
+      # --- 2. COMPILACIÓN DEL FRONTEND (NODE/VITE) ---
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Build Frontend Production
+        run: |
+          cd front_despacho
+          npm install
+          npm run build
+
+      # --- 3. CONFIGURACIÓN DE CREDENCIALES DE AWS ---
+      - name: Configurar las credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login en ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # --- 4. BUILD Y PUSH DOCKER: BACKEND VENTAS ---
+      - name: Build y Push Ventas Backend
+        run: |
+          docker build --platform linux/amd64 \
+          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/innovatech-ventas-backend:latest \
+          ./back-Ventas_SpringBoot/Springboot-API-REST
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/innovatech-ventas-backend:latest
+
+      # --- 5. BUILD Y PUSH DOCKER: BACKEND DESPACHOS ---
+      - name: Build y Push Despacho Backend
+        run: |
+          docker build --platform linux/amd64 \
+          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/innovatech-despacho-backend:latest \
+          ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/innovatech-despacho-backend:latest
+
+      # --- 6. BUILD Y PUSH DOCKER: FRONTEND ---
+      - name: Build y Push Frontend
+        run: |
+          docker build --platform linux/amd64 \
+          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/innovatech-frontend:latest \
+          ./front_despacho
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/innovatech-frontend:latest
+
+      # --- 7. REDESPLIEGUE EN ECS ---
+      - name: Forzar redespliegue en ECS
+        run: |
+          aws ecs update-service \
+          --cluster ${{ env.CLUSTER }} \
+          --service ${{ env.SERVICE }} \
+          --force-new-deployment

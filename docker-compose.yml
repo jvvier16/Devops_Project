@@ -24,6 +24,12 @@ services:
     # Red personalizada para comunicación entre contenedores
     networks:
       - app-network
+    # Configuración de logs con límite de tamaño para evitar saturar el disco
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Health check verifica si el servicio está saludable
     # Si falla, Docker sabe que el servicio no está listo
     healthcheck:
@@ -58,6 +64,12 @@ services:
     # Red personalizada para que los servicios se comuniquen entre sí
     networks:
       - app-network
+    # Configuración de logs con límite de tamaño para evitar saturar el disco
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Este servicio espera hasta que MySQL esté saludable antes de iniciar
     depends_on:
       mysql:
@@ -89,6 +101,12 @@ services:
     # Red personalizada para que los servicios se comuniquen entre sí
     networks:
       - app-network
+    # Configuración de logs con límite de tamaño para evitar saturar el disco
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Este servicio espera hasta que MySQL esté saludable antes de iniciar
     depends_on:
       mysql:
@@ -114,6 +132,12 @@ services:
     # Red personalizada para que los servicios se comuniquen entre sí
     networks:
       - app-network
+    # Configuración de logs con límite de tamaño para evitar saturar el disco
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Este servicio espera hasta que los backends estén disponibles
     depends_on:
       - backend-ventas

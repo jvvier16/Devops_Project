@@ -1,118 +1,56 @@
-name: Despliegue en AWS con EKS(elastic kubernet service)
-#como desplegar 
+name: Intregación Continua
+
 on:
-  pull_request:
-    branches:
-      - devops
   push:
-    branches:
-      - devops
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main" ]
+
 jobs:
-  devops:
+  # --- TRABAJO 1: TESTEAR EL BACKEND (JAVA) ---
+  backend-tests:
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
-      CLUSTER_NAME: despachos-cluster
     steps:
-      - name: Checkout (git clone...)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configurar credenciales de AWS
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
-          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
-          aws-region: ${{env.AWS_REGION}}
-      
-      - name: Loguear con ECR (elastic container registry)
-        uses: aws-actions/amazon-ecr-login@v2
-      
-      - name: Rescatar el AWS Account ID
-        run: |
-          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
 
-      - name: Definir las URL de los ECR
+      - name: Run Backend Tests (Despacho)
         run: |
-          echo "BACKEND_DESPACHO_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/backend-despacho" >> $GITHUB_ENV
-          echo "BACKEND_VENTAS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/backend-ventas" >> $GITHUB_ENV
-          echo "FRONTEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/frontend-despacho" >> $GITHUB_ENV
-      
-      - name: Build backend despacho
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            -t $BACKEND_DESPACHO_ECR:${GITHUB_SHA} \
-            ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO \
-            --load
-      - name: Push backend despacho
-        run: |
-          docker push $BACKEND_DESPACHO_ECR:${GITHUB_SHA}
+          cd back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+          chmod +x mvnw
+          ./mvnw test
 
-      - name: Build backend ventas
+      - name: Run Backend Tests (Venta)
         run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            -t $BACKEND_VENTAS_ECR:${GITHUB_SHA} \
-            ./back-Ventas_SpringBoot/Springboot-API-REST \
-            --load
-      - name: Push backend ventas
-        run: |
-          docker push $BACKEND_VENTAS_ECR:${GITHUB_SHA}
+          cd back-Ventas_SpringBoot/Springboot-API-REST
+          chmod +x mvnw
+          ./mvnw test
 
-      - name: Build frontend
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            -t $FRONTEND_ECR:${GITHUB_SHA} \
-            ./front_despacho \
-            --load
-      - name: Push frontend
-        run: |
-          docker push $FRONTEND_ECR:${GITHUB_SHA}
-      
-      - name: Instalar kubectl
-        uses: azure/setup-kubectl@v4
-      - name: Configurar EKS a través de GitHub ACtions
-        run: |
-          aws eks update-kubeconfig \
-            --region $AWS_REGION \
-            --name $CLUSTER_NAME
-      - name: Aplicar los manifiestos de kubernet
-        run: |
-          kubectl apply -f infra/k8s/
-          
-      - name: Actualizar imagen backend despacho
-        run: |
-          kubectl set image deployment/backend-despacho \
-            backend-despacho=$BACKEND_DESPACHO_ECR:${GITHUB_SHA}
+  # --- TRABAJO 2: TESTEAR EL FRONTEND (REACT) ---
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Actualizar imagen backend ventas
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './front_despacho/package-lock.json'
+
+      - name: Install Dependencies
         run: |
-          kubectl set image deployment/backend-ventas \
-            backend-ventas=$BACKEND_VENTAS_ECR:${GITHUB_SHA}
-      
-      - name: Actualizar imagen frontend
+          cd front_despacho
+          npm install
+
+      - name: Run Frontend Tests
         run: |
-          kubectl set image deployment/frontend-despacho \
-            frontend-despacho=$FRONTEND_ECR:${GITHUB_SHA}
-      
-      - name: Esperar despliegue backend despacho
-        run: |
-          kubectl rollout status deployment/backend-despacho
-      
-      - name: Esperar despliegue backend ventas
-        run: |
-          kubectl rollout status deployment/backend-ventas
-      
-      - name: Esperar despliegue frontend
-        run: |
-          kubectl rollout status deployment/frontend-despacho
-      
-      - name: Verificar servicio del frontend
-        run: |
-          kubectl get svc frontend-despacho
-      #linea de codigo
-      - name: Obtener dirección del Load Balancer
-        run: |
-          kubectl get service frontend-despacho -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "Buscando dirección..."
+          cd front_despacho
+          npm test
