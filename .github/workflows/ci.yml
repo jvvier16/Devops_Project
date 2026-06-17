@@ -1,14 +1,14 @@
-name: Intregación Continua
+name: Integración Continua
 
 on:
   push:
-   branches:
+    branches:
       - devops
+
+env:
+  AWS_REGION: us-east-1
+
 jobs:
-  devops:
-    runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
   # --- TRABAJO 1: TESTEAR EL BACKEND (JAVA) ---
   backend-tests:
     runs-on: ubuntu-latest
@@ -55,8 +55,10 @@ jobs:
       - name: Run Frontend Tests
         run: |
           cd front_despacho
-          npm test
- #linea de codigo
+          # Nota: En entornos de CI (como GitHub Actions), el comando 'npm test' de React suele quedarse escuchando cambios (watch mode). 
+          # Añadimos CI=true para que corra los tests una vez y termine el proceso.
+          CI=true npm test
+
       - name: Obtener dirección del Load Balancer
         run: |
           kubectl get service frontend-despacho -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "Buscando dirección..."
