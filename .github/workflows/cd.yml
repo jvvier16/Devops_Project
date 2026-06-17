@@ -11,7 +11,7 @@ env:
   SERVICE: app
 
 jobs:
-  deploy:
+  devops:
     runs-on: ubuntu-latest
 
     steps:
